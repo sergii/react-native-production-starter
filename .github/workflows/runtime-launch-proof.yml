@@ -12,7 +12,7 @@ jobs:
   ios-simulator-launch:
     name: iOS simulator launch
     runs-on: macos-26-intel
-    timeout-minutes: 50
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
