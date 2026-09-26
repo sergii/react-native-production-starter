@@ -69,15 +69,46 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Launch Android emulator and verify app
-        uses: ReactiveCircus/android-emulator-runner@cad321644df6d8cf1985a42767272ff068adb9cb # v2.38.0
-        with:
-          api-level: 36
-          arch: x86_64
-          target: google_apis
-          profile: pixel_6
-          disable-animations: true
-          script: bash scripts/ci/android-launch-proof.sh
+      - name: Create and boot Android emulator
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "emulator" "system-images;android-36;google_apis;x86_64"
+          echo "no" | avdmanager create avd \
+            --force \
+            --name rn-starter-api36 \
+            --package "system-images;android-36;google_apis;x86_64" \
+            --device "pixel_6"
+
+          nohup emulator \
+            -avd rn-starter-api36 \
+            -no-window \
+            -no-audio \
+            -no-boot-anim \
+            -no-snapshot \
+            -gpu swiftshader_indirect \
+            > "$RUNNER_TEMP/android-emulator.log" 2>&1 &
+
+          adb wait-for-device
+
+          for _ in {1..120}; do
+            if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; then
+              break
+            fi
+            sleep 5
+          done
+
+          if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]]; then
+            cat "$RUNNER_TEMP/android-emulator.log"
+            exit 1
+          fi
+
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+
+      - name: Build, install, and launch on Android Emulator
+        run: bash scripts/ci/android-launch-proof.sh
 
       - name: Upload Android launch evidence
         if: always()
