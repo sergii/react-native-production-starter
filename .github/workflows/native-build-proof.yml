@@ -1,0 +1,81 @@
+name: Native build proof
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-native-build:
+    name: Android native build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.21.0
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@536de9e5ba95309550b74c08e297b4b0f11e8b7d # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install
+        run: npm ci
+
+      - name: Record Android toolchain
+        run: |
+          java -version
+          node --version
+          npm --version
+          echo "ANDROID_HOME=$ANDROID_HOME"
+
+      - name: Generate Android project
+        env:
+          APP_ENV: development
+        run: npx expo prebuild --clean --platform android --no-install
+
+      - name: Compile Android debug APK
+        working-directory: android
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+  ios-simulator-build:
+    name: iOS simulator build
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.21.0
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Record Apple toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+          node --version
+          npm --version
+
+      - name: Compile generic iOS simulator app
+        env:
+          APP_ENV: development
+          EXPO_NO_DEPLOY: '1'
+        run: npx expo run:ios --configuration Release --device generic --output ./build/ios
