@@ -1,0 +1,55 @@
+name: Harden Phase 1 dependency graph
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.21.0
+          cache: npm
+
+      - name: Install current graph
+        run: npm ci
+
+      - name: Align Test Renderer with React 19.2
+        run: npm install --save-dev --save-exact test-renderer@1.2.0
+
+      - name: Approve reviewed install scripts
+        run: npm install-scripts approve @sentry/cli unrs-resolver
+
+      - name: Enforce reviewed install scripts
+        run: npm config set strict-allow-scripts=true --location=project
+
+      - name: Verify graph
+        run: |
+          npm ci
+          npm run check:compat
+          npx --yes expo-doctor@1.20.4
+          npm audit --omit=dev --audit-level=high
+
+      - name: Record hardened graph
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/dependency-hardening.yml
+          rm -f .dependency-hardening-trigger
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: harden Phase 1 dependency graph"
+          git push origin HEAD:main
