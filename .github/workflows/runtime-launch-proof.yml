@@ -124,7 +124,7 @@ jobs:
             --package "system-images;android-36;google_apis;x86_64" \
             --device "pixel_6"
 
-          nohup "$EMULATOR" \
+          "$EMULATOR" \
             -avd rn-starter-api36 \
             -no-window \
             -no-audio \
@@ -132,17 +132,27 @@ jobs:
             -no-snapshot \
             -gpu swiftshader_indirect \
             > "$RUNNER_TEMP/android-emulator.log" 2>&1 &
+          EMULATOR_PID=$!
 
-          "$ADB" wait-for-device
-
+          booted=0
           for _ in {1..120}; do
-            if [[ "$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; then
+            if ! kill -0 "$EMULATOR_PID" 2>/dev/null; then
+              echo "Android emulator exited before boot completed" >&2
+              cat "$RUNNER_TEMP/android-emulator.log"
+              exit 1
+            fi
+
+            if [[ "$("$ADB" get-state 2>/dev/null || true)" == "device" ]] && \
+               [[ "$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; then
+              booted=1
               break
             fi
+
             sleep 5
           done
 
-          if [[ "$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]]; then
+          if [[ "$booted" != "1" ]]; then
+            echo "Android emulator did not boot within 10 minutes" >&2
             cat "$RUNNER_TEMP/android-emulator.log"
             exit 1
           fi
