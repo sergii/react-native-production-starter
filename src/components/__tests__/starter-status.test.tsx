@@ -3,8 +3,8 @@ import { render } from '@testing-library/react-native';
 import { StarterStatus } from '@/components/starter-status';
 
 describe('StarterStatus', () => {
-  it('renders release identity', () => {
-    const screen = render(
+  it('renders release identity', async () => {
+    const screen = await render(
       <StarterStatus environment="staging" gitSha="abc123" />,
     );
 
