@@ -111,6 +111,10 @@ jobs:
 
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
 
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME"
+
           if [[ -e /dev/kvm ]]; then
             sudo chmod 666 /dev/kvm
             ls -l /dev/kvm
