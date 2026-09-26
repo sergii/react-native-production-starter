@@ -1,56 +1,128 @@
-# Welcome to your Expo app 👋
+# React Native Production Starter
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Executable React Native / Expo golden path for production-safe mobile projects.
 
-## Get started
+## Status
 
-1. Install dependencies
+Phase 1 - **in progress**
 
-   ```bash
-   npm install
-   ```
+The repository was generated from the dated compatibility snapshot `expo57-2026-09-26`.
 
-2. Start the app
+Shared policy is frozen in:
 
-   ```bash
-   npx expo start
-   ```
+- Mobile Engineering Playbook: `v0.5.0`
+- release-content revision: `3deecbbf63d0f116dbdf7ff1fd904d5799e425e1`
 
-In the output, you'll find options to open the app in a
+The stack snapshot is still **candidate**, not verified. It is promoted only after its proof matrix passes.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Pinned baseline
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- Node 24.21.x
+- npm 11.19.0
+- Expo SDK 57
+- React Native 0.86.3
+- React 19.2.3
+- Expo Router
+- CNG / Prebuild native ownership
+- development builds for native verification
 
-## Get a fresh project
+The committed lockfile is the exact dependency graph for this implementation.
 
-When you're ready, run:
+## Commands
 
 ```bash
-npm run reset-project
+npm ci
+npm start
+npm run start:dev
+
+npm run lint
+npm run typecheck
+npm run test:ci
+npm run verify:environments
+npm run check:compat
+npm run check:fast
+
+npx --yes expo-doctor@1.20.4
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Environment identity
 
-### Other setup steps
+Set `APP_ENV` to one of:
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```text
+development
+staging
+production
+```
 
-## Learn more
+Every environment has a distinct bundle identifier, Android package, app name, and URL scheme.
 
-To learn more about developing your project with Expo, look at the following resources:
+The `com.example.*` identifiers are deliberate starter placeholders. A generated product must replace them before distribution.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Optional runtime configuration:
 
-## Join the community
+```text
+EXPO_PUBLIC_API_URL
+EXPO_PUBLIC_SENTRY_DSN
+GIT_SHA
+BUILD_ID
+APP_VERSION
+IOS_BUILD_NUMBER
+ANDROID_VERSION_CODE
+```
 
-Join our community of developers creating universal apps.
+Sentry build/source-map integration additionally uses non-public build secrets/configuration such as `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT`.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Current Phase 1 boundaries
+
+Implemented or being proven:
+
+- strict TypeScript;
+- deterministic dev/staging/production identity;
+- release/build metadata;
+- Expo Router navigation and deep-link scheme;
+- secure credential boundary via `expo-secure-store`;
+- centralized HTTP boundary;
+- Sentry crash-reporting/Metro source-map integration;
+- support-safe diagnostics screen;
+- Jest + `jest-expo`;
+- React Native Testing Library;
+- pinned GitHub Actions fast gate;
+- Expo compatibility checks.
+
+Still required before Phase 1 is complete:
+
+- green CI evidence;
+- iOS simulator build/launch;
+- Android emulator build/launch;
+- proof records tied to the snapshot and commit.
+
+Real-device and distribution proof belongs to snapshot verification / later release-safety steps.
+
+## Testing model
+
+```text
+Jest + jest-expo
+        ↓
+React Native Testing Library
+        ↓
+Maestro deterministic E2E
+        ↓
+agent-device exploratory verification/evidence
+        ↓
+XcodeBuildMCP when deep iOS-native debugging is needed
+```
+
+Agents discover and verify. Deterministic tests protect. Evidence proves.
+
+## Native ownership
+
+This project is CNG / Prebuild owned.
+
+Do not commit manual persistent changes directly into generated `ios/` or `android/` projects. Durable native configuration belongs in `app.config.ts`, config plugins, or an explicit Expo module.
+
+## Related documentation
+
+- `docs/architecture/runtime-boundaries.md`
+- `docs/release/sentry.md`
+- root `AGENTS.md`

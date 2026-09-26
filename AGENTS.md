@@ -1,3 +1,29 @@
+# Production starter agent contract
+
+This repository is the executable React Native / Expo production starter.
+
+Shared policy:
+- repository: https://github.com/sergii/mobile-engineering-playbook
+- playbook version: v0.5.0
+- frozen release-content revision: 3deecbbf63d0f116dbdf7ff1fd904d5799e425e1
+- stack snapshot: expo57-2026-09-26
+- snapshot status at bootstrap: candidate
+
+Before changing architecture, dependencies, native configuration, testing strategy, release behavior, or persistence, read the smallest relevant document from that frozen playbook revision.
+
+Local rules:
+- Never silently replace snapshot versions with "latest".
+- Treat Expo SDK 57 as the compatibility anchor for this implementation branch.
+- Install Expo/native dependencies with `npx expo install`.
+- Keep CNG / Prebuild as the native source of truth.
+- Keep the generated lockfile committed.
+- Run `npm run check:fast`, `npx expo install --check`, and the pinned Expo Doctor check before claiming Phase 1 complete.
+- Maestro owns durable deterministic mobile E2E contracts.
+- agent-device is for exploratory verification and evidence, not a substitute for deterministic regression tests.
+- Only mark proof items complete after they have actually run.
+
+---
+
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
 ## Expo has changed — do not trust your training data
@@ -36,6 +62,6 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## Rules
 
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
+- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.config.ts` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
