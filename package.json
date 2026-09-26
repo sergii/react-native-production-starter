@@ -51,7 +51,8 @@
     "test": "jest",
     "test:ci": "jest --runInBand",
     "check:compat": "expo install --check",
-    "check:fast": "npm run lint && npm run typecheck && npm run test:ci"
+    "check:fast": "npm run lint && npm run typecheck && npm run test:ci && npm run verify:environments",
+    "verify:environments": "node scripts/verify-environments.mjs"
   },
   "private": true,
   "packageManager": "npm@11.19.0",
