@@ -72,18 +72,31 @@ jobs:
       - name: Create and boot Android emulator
         run: |
           set -euo pipefail
-          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -perm -111 2>/dev/null | sort -V | tail -n 1)"
-          AVDMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name avdmanager -perm -111 2>/dev/null | sort -V | tail -n 1)"
-          EMULATOR="$(find "$ANDROID_HOME/emulator" -maxdepth 1 -type f -name emulator -perm -111 2>/dev/null | head -n 1)"
-
           echo "ANDROID_HOME=$ANDROID_HOME"
+          find "$ANDROID_HOME" -maxdepth 4 -type f \( -name sdkmanager -o -name avdmanager -o -name emulator \) -print 2>/dev/null || true
+
+          SDKMANAGER="$(find "$ANDROID_HOME" -type f -name sdkmanager -perm -111 2>/dev/null | sort -V | tail -n 1 || true)"
+          AVDMANAGER="$(find "$ANDROID_HOME" -type f -name avdmanager -perm -111 2>/dev/null | sort -V | tail -n 1 || true)"
+          EMULATOR="$(find "$ANDROID_HOME" -type f -name emulator -perm -111 2>/dev/null | head -n 1 || true)"
+
           echo "SDKMANAGER=$SDKMANAGER"
           echo "AVDMANAGER=$AVDMANAGER"
           echo "EMULATOR=$EMULATOR"
 
-          [[ -n "$SDKMANAGER" && -x "$SDKMANAGER" ]]
-          [[ -n "$AVDMANAGER" && -x "$AVDMANAGER" ]]
-          [[ -n "$EMULATOR" && -x "$EMULATOR" ]]
+          if [[ -z "$SDKMANAGER" || ! -x "$SDKMANAGER" ]]; then
+            echo "sdkmanager executable not found under ANDROID_HOME" >&2
+            exit 1
+          fi
+
+          if [[ -z "$AVDMANAGER" || ! -x "$AVDMANAGER" ]]; then
+            echo "avdmanager executable not found under ANDROID_HOME" >&2
+            exit 1
+          fi
+
+          if [[ -z "$EMULATOR" || ! -x "$EMULATOR" ]]; then
+            echo "emulator executable not found under ANDROID_HOME" >&2
+            exit 1
+          fi
 
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platform-tools" "emulator" "system-images;android-36;google_apis;x86_64"
