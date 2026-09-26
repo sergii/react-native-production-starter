@@ -72,15 +72,23 @@ jobs:
       - name: Create and boot Android emulator
         run: |
           set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "emulator" "system-images;android-36;google_apis;x86_64"
-          echo "no" | avdmanager create avd \
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+          EMULATOR="$ANDROID_HOME/emulator/emulator"
+
+          test -x "$SDKMANAGER"
+          test -x "$AVDMANAGER"
+          test -x "$EMULATOR"
+
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "emulator" "system-images;android-36;google_apis;x86_64"
+          echo "no" | "$AVDMANAGER" create avd \
             --force \
             --name rn-starter-api36 \
             --package "system-images;android-36;google_apis;x86_64" \
             --device "pixel_6"
 
-          nohup emulator \
+          nohup "$EMULATOR" \
             -avd rn-starter-api36 \
             -no-window \
             -no-audio \
