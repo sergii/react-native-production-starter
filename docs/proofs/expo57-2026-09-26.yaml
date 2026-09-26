@@ -1,0 +1,54 @@
+schema_version: 1
+snapshot_id: expo57-2026-09-26
+status: partial
+
+playbook:
+  version: v0.5.0
+  release_content_revision: 3deecbbf63d0f116dbdf7ff1fd904d5799e425e1
+
+repository:
+  name: sergii/react-native-production-starter
+  scaffold_commit: 89b6f2e40dd6805cc18b537be5e8703c9a722233
+  phase1_merge_commit: b238f01b1c52171867efc26a8c44f1d496f8d42b
+  dependency_hardening_commit: 18cbbb8f748d4f810b1599a84e5456cae5f8a95e
+
+fast_gate:
+  pull_request: 1
+  head_sha: 2b06c67065c5af8d57067595c82a8cc0af5ec0ae
+  workflow_run_id: 36251607394
+  job_id: 108430559125
+  checks:
+    npm_ci: passed
+    expo_install_check: passed
+    expo_doctor_1_20_4: passed
+    lint: passed
+    typecheck: passed
+    unit_component_tests: passed
+    environment_identity: passed
+
+dependency_policy:
+  node: 24.21.0
+  npm: 11.19.0
+  react: 19.2.3
+  react_native: 0.86.3
+  testing_library_react_native: 14.0.1
+  test_renderer: 1.2.0
+  strict_install_script_policy: true
+  approved_install_scripts:
+    - "@sentry/cli@2.58.4"
+    - "unrs-resolver@1.12.2"
+  production_dependency_audit_high_or_above: passed_during_dependency_hardening
+
+pending:
+  ios_simulator_build_and_launch: true
+  android_emulator_build_and_launch: true
+  ios_real_device: true
+  android_low_end_real_device: true
+  internal_distribution_ios: true
+  internal_distribution_android: true
+  upgrade_path: true
+  ota_compatibility_and_rollback: true
+
+note: >-
+  This is partial evidence only. The compatibility snapshot remains candidate.
+  Passing repository checks does not prove native runtime or release behavior.
