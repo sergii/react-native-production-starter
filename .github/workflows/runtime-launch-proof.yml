@@ -1,0 +1,179 @@
+name: Runtime launch proof
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios-simulator-launch:
+    name: iOS simulator launch
+    runs-on: macos-26-intel
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.21.0
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Record Apple toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+          node --version
+          npm --version
+
+      - name: Build, install, and launch on iOS Simulator
+        run: bash scripts/ci/ios-launch-proof.sh
+
+      - name: Upload iOS launch evidence
+        if: always()
+        uses: actions/upload-artifact@615b319bd27bb32c3d64dca6b6ed6974d5fbe653 # v6.0.0
+        with:
+          name: ios-launch-evidence
+          path: artifacts/ios-launch.png
+          if-no-files-found: warn
+
+  android-emulator-launch:
+    name: Android emulator launch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.21.0
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@536de9e5ba95309550b74c08e297b4b0f11e8b7d # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install
+        run: npm ci
+
+      - name: Create and boot Android emulator
+        run: |
+          set -euo pipefail
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          find "$ANDROID_HOME" -maxdepth 4 -type f \( -name sdkmanager -o -name avdmanager -o -name emulator \) -print 2>/dev/null || true
+
+          SDKMANAGER="$(find "$ANDROID_HOME" -type f -name sdkmanager -perm -111 2>/dev/null | sort -V | tail -n 1 || true)"
+          AVDMANAGER="$(find "$ANDROID_HOME" -type f -name avdmanager -perm -111 2>/dev/null | sort -V | tail -n 1 || true)"
+
+          echo "SDKMANAGER=$SDKMANAGER"
+          echo "AVDMANAGER=$AVDMANAGER"
+
+          if [[ -z "$SDKMANAGER" || ! -x "$SDKMANAGER" ]]; then
+            echo "sdkmanager executable not found under ANDROID_HOME" >&2
+            exit 1
+          fi
+
+          if [[ -z "$AVDMANAGER" || ! -x "$AVDMANAGER" ]]; then
+            echo "avdmanager executable not found under ANDROID_HOME" >&2
+            exit 1
+          fi
+
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "emulator" "system-images;android-36;google_apis;x86_64"
+
+          EMULATOR="$(find "$ANDROID_HOME/emulator" -maxdepth 1 -type f -name emulator -perm -111 2>/dev/null | head -n 1 || true)"
+          ADB="$ANDROID_HOME/platform-tools/adb"
+          echo "EMULATOR=$EMULATOR"
+          echo "ADB=$ADB"
+
+          if [[ -z "$EMULATOR" || ! -x "$EMULATOR" ]]; then
+            echo "emulator executable not found after SDK installation" >&2
+            exit 1
+          fi
+
+          if [[ ! -x "$ADB" ]]; then
+            echo "adb executable not found after SDK installation" >&2
+            exit 1
+          fi
+
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME"
+
+          if [[ -e /dev/kvm ]]; then
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm
+          else
+            echo "Warning: /dev/kvm is unavailable; emulator may use software acceleration" >&2
+          fi
+
+          echo "no" | "$AVDMANAGER" create avd \
+            --force \
+            --name rn-starter-api36 \
+            --package "system-images;android-36;google_apis;x86_64" \
+            --device "pixel_6"
+
+          "$EMULATOR" \
+            -avd rn-starter-api36 \
+            -no-window \
+            -no-audio \
+            -no-boot-anim \
+            -no-snapshot \
+            -gpu swiftshader_indirect \
+            > "$RUNNER_TEMP/android-emulator.log" 2>&1 &
+          EMULATOR_PID=$!
+
+          booted=0
+          for _ in {1..120}; do
+            if ! kill -0 "$EMULATOR_PID" 2>/dev/null; then
+              echo "Android emulator exited before boot completed" >&2
+              cat "$RUNNER_TEMP/android-emulator.log"
+              exit 1
+            fi
+
+            if [[ "$("$ADB" get-state 2>/dev/null || true)" == "device" ]] && \
+               [[ "$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; then
+              booted=1
+              break
+            fi
+
+            sleep 5
+          done
+
+          if [[ "$booted" != "1" ]]; then
+            echo "Android emulator did not boot within 10 minutes" >&2
+            cat "$RUNNER_TEMP/android-emulator.log"
+            exit 1
+          fi
+
+          "$ADB" shell settings put global window_animation_scale 0
+          "$ADB" shell settings put global transition_animation_scale 0
+          "$ADB" shell settings put global animator_duration_scale 0
+
+      - name: Build, install, and launch on Android Emulator
+        run: bash scripts/ci/android-launch-proof.sh
+
+      - name: Upload Android launch evidence
+        if: always()
+        uses: actions/upload-artifact@615b319bd27bb32c3d64dca6b6ed6974d5fbe653 # v6.0.0
+        with:
+          name: android-launch-evidence
+          path: |
+            artifacts/android-launch.png
+            artifacts/android-window.xml
+          if-no-files-found: warn

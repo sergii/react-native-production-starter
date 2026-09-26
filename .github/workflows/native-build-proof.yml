@@ -51,6 +51,7 @@ jobs:
 
   ios-simulator-build:
     name: iOS simulator build
+    if: github.event_name != 'pull_request' || github.head_ref != 'phase1/runtime-launch-proof'
     runs-on: macos-26
     timeout-minutes: 45
 
