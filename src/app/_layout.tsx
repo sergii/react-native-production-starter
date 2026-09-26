@@ -1,18 +1,18 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Stack } from 'expo-router';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { initObservability, Sentry } from '@/lib/observability/sentry';
 
-SplashScreen.preventAutoHideAsync();
+initObservability();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export { ErrorBoundary } from 'expo-router';
+
+function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <Stack>
+      <Stack.Screen name="index" options={{ title: 'Production Starter' }} />
+      <Stack.Screen name="debug" options={{ title: 'Diagnostics' }} />
+    </Stack>
   );
 }
+
+export default Sentry.wrap(RootLayout);
