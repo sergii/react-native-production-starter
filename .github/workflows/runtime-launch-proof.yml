@@ -72,13 +72,18 @@ jobs:
       - name: Create and boot Android emulator
         run: |
           set -euo pipefail
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
-          EMULATOR="$ANDROID_HOME/emulator/emulator"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -perm -111 2>/dev/null | sort -V | tail -n 1)"
+          AVDMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name avdmanager -perm -111 2>/dev/null | sort -V | tail -n 1)"
+          EMULATOR="$(find "$ANDROID_HOME/emulator" -maxdepth 1 -type f -name emulator -perm -111 2>/dev/null | head -n 1)"
 
-          test -x "$SDKMANAGER"
-          test -x "$AVDMANAGER"
-          test -x "$EMULATOR"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "SDKMANAGER=$SDKMANAGER"
+          echo "AVDMANAGER=$AVDMANAGER"
+          echo "EMULATOR=$EMULATOR"
+
+          [[ -n "$SDKMANAGER" && -x "$SDKMANAGER" ]]
+          [[ -n "$AVDMANAGER" && -x "$AVDMANAGER" ]]
+          [[ -n "$EMULATOR" && -x "$EMULATOR" ]]
 
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platform-tools" "emulator" "system-images;android-36;google_apis;x86_64"
