@@ -1,0 +1,90 @@
+name: Runtime launch proof
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios-simulator-launch:
+    name: iOS simulator launch
+    runs-on: macos-26
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.21.0
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Record Apple toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+          node --version
+          npm --version
+
+      - name: Build, install, and launch on iOS Simulator
+        run: bash scripts/ci/ios-launch-proof.sh
+
+      - name: Upload iOS launch evidence
+        if: always()
+        uses: actions/upload-artifact@615b319bd27bb32c3d64dca6b6ed6974d5fbe653 # v6.0.0
+        with:
+          name: ios-launch-evidence
+          path: artifacts/ios-launch.png
+          if-no-files-found: warn
+
+  android-emulator-launch:
+    name: Android emulator launch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.21.0
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@536de9e5ba95309550b74c08e297b4b0f11e8b7d # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install
+        run: npm ci
+
+      - name: Launch Android emulator and verify app
+        uses: ReactiveCircus/android-emulator-runner@cad321644df6d8cf1985a42767272ff068adb9cb # v2.38.0
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: bash scripts/ci/android-launch-proof.sh
+
+      - name: Upload Android launch evidence
+        if: always()
+        uses: actions/upload-artifact@615b319bd27bb32c3d64dca6b6ed6974d5fbe653 # v6.0.0
+        with:
+          name: android-launch-evidence
+          path: |
+            artifacts/android-launch.png
+            artifacts/android-window.xml
+          if-no-files-found: warn
