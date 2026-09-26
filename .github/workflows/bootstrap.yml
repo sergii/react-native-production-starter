@@ -1,0 +1,58 @@
+name: Bootstrap exact Expo snapshot
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.21.0
+
+      - name: Verify bootstrap toolchain
+        run: |
+          node --version
+          npm --version
+
+      - name: Scaffold exact snapshot
+        env:
+          CI: "1"
+          npm_config_yes: "true"
+        run: |
+          set -euo pipefail
+          target="$RUNNER_TEMP/react-native-production-starter"
+
+          npx --yes create-expo@5.0.2 "$target" \
+            --template expo-template-default@57.0.27 \
+            --yes
+
+          rm -rf "$target/.git"
+
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$target"/. .
+
+          # The bootstrap workflow is intentionally one-shot.
+          rm -f .github/workflows/bootstrap.yml
+
+      - name: Record untouched generated project
+        run: |
+          set -euo pipefail
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: scaffold from expo57 snapshot"
+          git push origin HEAD:main
